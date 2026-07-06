@@ -260,9 +260,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#052e16;border:1px solid var(--green);color:#86efac;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 @media(max-width:600px){
-  .admin-sidebar{display:none;position:fixed;top:54px;left:0;bottom:0;z-index:300;width:220px}
-  .admin-sidebar.open{display:block}
-  .admin-main{padding:12px}
+  .admin-layout{flex-direction:column}
+  .admin-sidebar{
+    display:flex!important;flex-direction:row;
+    width:100%;height:auto;
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    border-right:none;border-top:1px solid var(--border);
+    padding:0;z-index:300;overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .admin-sidebar::-webkit-scrollbar{display:none}
+  .sidebar-section{display:none}
+  .sidebar-item{
+    flex:0 0 auto;
+    padding:6px 4px 4px;
+    border-left:none;border-top:2px solid transparent;
+    flex-direction:column;justify-content:center;align-items:center;
+    gap:1px;min-width:58px;font-size:10px;text-align:center;
+  }
+  .sidebar-item.active{border-left:none;border-top-color:var(--purple);background:var(--surface2)}
+  .admin-main{padding:12px;padding-bottom:80px}
 }
 </style>
 </head>
@@ -412,18 +429,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   <div class="admin-layout">
     <div class="admin-sidebar" id="adminSidebar">
       <div class="sidebar-section">Übersicht</div>
-      <div class="sidebar-item active" onclick="aNav('dashboard')">📊 Dashboard</div>
+      <div class="sidebar-item active" onclick="aNav('dashboard')"><span style="font-size:18px;display:block">📊</span>Dashboard</div>
       <div class="sidebar-section">Inhalte</div>
-      <div class="sidebar-item" onclick="aNav('aHints')">⚠️ Allg. Hinweise</div>
-      <div class="sidebar-item" onclick="aNav('aMachine')">🔩 Masch.-Hinweise</div>
-      <div class="sidebar-item" onclick="aNav('aSortier')">🔍 Sortierung</div>
-      <div class="sidebar-item" onclick="aNav('aMes')">🖥️ MES Zeitarten</div>
-      <div class="sidebar-item" onclick="aNav('aChecklist')">✅ Checkliste</div>
-      <div class="sidebar-item" onclick="aNav('aTutorials')">📖 Tutorials</div>
-      <div class="sidebar-item" onclick="aNav('aKontakte')">📞 Kontakte</div>
-      <div class="sidebar-item" onclick="aNav('aUebergabe')">🔄 Übergaben</div>
+      <div class="sidebar-item" onclick="aNav('aHints')"><span style="font-size:18px;display:block">⚠️</span>Hinweise</div>
+      <div class="sidebar-item" onclick="aNav('aMachine')"><span style="font-size:18px;display:block">🔩</span>Maschinen</div>
+      <div class="sidebar-item" onclick="aNav('aSortier')"><span style="font-size:18px;display:block">🔍</span>Sortierung</div>
+      <div class="sidebar-item" onclick="aNav('aMes')"><span style="font-size:18px;display:block">🖥️</span>MES</div>
+      <div class="sidebar-item" onclick="aNav('aChecklist')"><span style="font-size:18px;display:block">✅</span>Checkliste</div>
+      <div class="sidebar-item" onclick="aNav('aTutorials')"><span style="font-size:18px;display:block">📖</span>Tutorials</div>
+      <div class="sidebar-item" onclick="aNav('aKontakte')"><span style="font-size:18px;display:block">📞</span>Kontakte</div>
+      <div class="sidebar-item" onclick="aNav('aUebergabe')"><span style="font-size:18px;display:block">🔄</span>Übergabe</div>
       <div class="sidebar-section">System</div>
-      <div class="sidebar-item" onclick="aNav('aSettings')">⚙️ Einstellungen</div>
+      <div class="sidebar-item" onclick="aNav('aSettings')"><span style="font-size:18px;display:block">⚙️</span>Settings</div>
     </div>
     <div class="admin-main">
 
