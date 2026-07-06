@@ -223,12 +223,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .viewer-main{flex:1;padding:16px;overflow-y:auto;min-width:0}
 .vpanel{display:none}.vpanel.active{display:block}
 @media(max-width:600px){
-  .viewer-sidebar{width:52px}
-  .vsidebar-item{padding:12px 0;justify-content:center;font-size:17px}
-  .vsidebar-item span:not(.vsidebar-badge){display:none}
+  .viewer-layout{flex-direction:column}
+  .viewer-sidebar{
+    width:100%;height:auto;
+    position:fixed;bottom:0;left:0;right:0;top:auto;
+    border-right:none;border-top:1px solid var(--border);
+    padding:0;z-index:150;
+    display:flex;flex-direction:row;overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .viewer-sidebar::-webkit-scrollbar{display:none}
   .sidebar-section{display:none}
+  .vsidebar-item{
+    flex:0 0 auto;
+    padding:6px 4px 4px;
+    border-left:none;border-top:2px solid transparent;
+    flex-direction:column;justify-content:center;align-items:center;
+    gap:2px;min-width:60px;font-size:11px;text-align:center;
+  }
+  .vsidebar-item.active{border-left:none;border-top-color:var(--accent);background:var(--surface2)}
+  .vsidebar-item .vi{font-size:20px;display:block}
   .vsidebar-badge{display:none}
-  .viewer-main{padding:12px}
+  .viewer-main{padding:10px;padding-bottom:80px}
 }
 .kachel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
 .kachel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
@@ -313,17 +329,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <!-- SIDEBAR -->
     <div class="viewer-sidebar">
       <div class="sidebar-section">Hinweise</div>
-      <div class="vsidebar-item active" id="vs-hints" onclick="openKachel('hints')">⚠️ Allg. Hinweise</div>
-      <div class="vsidebar-item" id="vs-machine" onclick="openKachel('machine')">🔩 Maschine</div>
+      <div class="vsidebar-item active" id="vs-hints" onclick="openKachel('hints')"><span class="vi">⚠️</span>Hinweise</div>
+      <div class="vsidebar-item" id="vs-machine" onclick="openKachel('machine')"><span class="vi">🔩</span>Maschine</div>
       <div class="sidebar-section">Bereiche</div>
-      <div class="vsidebar-item" id="vs-mes" onclick="openKachel('mes')">🖥️ MES Zeiten</div>
-      <div class="vsidebar-item" id="vs-checklist" onclick="openKachel('checklist')">
-        ✅ Checkliste
-        <span class="vsidebar-badge" id="kachelCheckSub"></span>
-      </div>
-      <div class="vsidebar-item" id="vs-tutorials" onclick="openKachel('tutorials')">📖 Tutorials</div>
-      <div class="vsidebar-item" id="vs-kontakte" onclick="openKachel('kontakte')">📞 Kontakte</div>
-      <div class="vsidebar-item" id="vs-uebergabe" onclick="openKachel('uebergabe')">🔄 Übergabe</div>
+      <div class="vsidebar-item" id="vs-mes" onclick="openKachel('mes')"><span class="vi">🖥️</span>MES</div>
+      <div class="vsidebar-item" id="vs-checklist" onclick="openKachel('checklist')"><span class="vi">✅</span>Checkliste<span class="vsidebar-badge" id="kachelCheckSub"></span></div>
+      <div class="vsidebar-item" id="vs-tutorials" onclick="openKachel('tutorials')"><span class="vi">📖</span>Tutorials</div>
+      <div class="vsidebar-item" id="vs-kontakte" onclick="openKachel('kontakte')"><span class="vi">📞</span>Kontakte</div>
+      <div class="vsidebar-item" id="vs-uebergabe" onclick="openKachel('uebergabe')"><span class="vi">🔄</span>Übergabe</div>
     </div>
 
     <!-- HAUPTINHALT -->
