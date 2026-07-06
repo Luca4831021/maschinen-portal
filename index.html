@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Maschinen Portal">
@@ -57,12 +57,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;flex-shrink:0}
 #syncStatus{font-size:10px;color:var(--green);white-space:nowrap}
 @media(max-width:600px){
-  .app-header{padding:0 10px;height:50px}
-  .machine-tag{font-size:10px;padding:2px 7px}
-  .page-title{font-size:13px}
+  .app-header{padding:0 10px;height:48px}
+  .machine-tag{font-size:10px;padding:2px 6px}
+  .page-title{font-size:12px;max-width:100px}
   .clock-d{display:none}
   .mode-badge{display:none}
-  .logout-btn{padding:4px 8px;font-size:10px}
+  .logout-btn{padding:4px 8px;font-size:11px}
+  #syncStatus{display:none}
 }
 
 /* VIEWER */
@@ -240,26 +241,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 @media(max-width:600px){
   .viewer-layout{flex-direction:column}
   .viewer-sidebar{
-    width:100%;height:auto;
+    width:100%;height:58px;
     position:fixed;bottom:0;left:0;right:0;top:auto;
     border-right:none;border-top:1px solid var(--border);
     padding:0;z-index:150;
-    display:flex;flex-direction:row;overflow-x:auto;
-    scrollbar-width:none;
+    display:flex!important;flex-direction:row;overflow-x:auto;
+    scrollbar-width:none;background:var(--surface);
   }
   .viewer-sidebar::-webkit-scrollbar{display:none}
   .sidebar-section{display:none}
   .vsidebar-item{
     flex:0 0 auto;
-    padding:6px 4px 4px;
+    padding:5px 8px 4px;
     border-left:none;border-top:2px solid transparent;
     flex-direction:column;justify-content:center;align-items:center;
-    gap:2px;min-width:60px;font-size:11px;text-align:center;
+    gap:1px;min-width:62px;font-size:10px;text-align:center;white-space:nowrap;
   }
   .vsidebar-item.active{border-left:none;border-top-color:var(--accent);background:var(--surface2)}
-  .vsidebar-item .vi{font-size:20px;display:block}
+  .vsidebar-item .vi{font-size:18px;display:block;line-height:1.2}
   .vsidebar-badge{display:none}
-  .viewer-main{padding:10px;padding-bottom:80px}
+  .viewer-main{padding:10px;padding-top:12px;padding-bottom:80px}
 }
 .kachel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
 .kachel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
@@ -278,23 +279,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   .admin-layout{flex-direction:column}
   .admin-sidebar{
     display:flex!important;flex-direction:row;
-    width:100%;height:auto;
+    width:100%;height:58px;
     position:fixed;bottom:0;left:0;right:0;top:auto;
     border-right:none;border-top:1px solid var(--border);
     padding:0;z-index:300;overflow-x:auto;
-    scrollbar-width:none;
+    scrollbar-width:none;background:var(--surface);
   }
   .admin-sidebar::-webkit-scrollbar{display:none}
   .sidebar-section{display:none}
   .sidebar-item{
     flex:0 0 auto;
-    padding:6px 4px 4px;
+    padding:5px 8px 4px;
     border-left:none;border-top:2px solid transparent;
     flex-direction:column;justify-content:center;align-items:center;
-    gap:1px;min-width:58px;font-size:10px;text-align:center;
+    gap:1px;min-width:62px;font-size:10px;text-align:center;white-space:nowrap;
   }
   .sidebar-item.active{border-left:none;border-top-color:var(--purple);background:var(--surface2)}
-  .admin-main{padding:12px;padding-bottom:80px}
+  .admin-main{padding:10px;padding-top:12px;padding-bottom:80px}
 }
 </style>
 </head>
@@ -348,7 +349,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <div class="page-title" id="headerTitle">Spritzguss</div>
   </div>
   <div class="h-right">
-    <div id="syncStatus" style="font-size:11px;color:var(--green);opacity:0;transition:opacity .5s;margin-right:4px"></div><div class="clock-d" id="clockD"></div>
+    <div class="clock-d" id="clockD"></div><div id="syncStatus" style="font-size:10px;color:var(--green);opacity:0;transition:opacity .5s"></div>
     <div class="mode-badge" id="modeBadge"></div>
     <button class="logout-btn" onclick="doLogout()">↩</button>
   </div>
