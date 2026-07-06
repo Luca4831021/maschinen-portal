@@ -300,7 +300,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <div class="page-title" id="headerTitle">Spritzguss</div>
   </div>
   <div class="h-right">
-    <div class="clock-d" id="clockD"></div>
+    <div id="syncStatus" style="font-size:11px;color:var(--green);opacity:0;transition:opacity .5s;margin-right:4px"></div><div class="clock-d" id="clockD"></div>
     <div class="mode-badge" id="modeBadge"></div>
     <button class="logout-btn" onclick="doLogout()">↩</button>
   </div>
@@ -626,11 +626,70 @@ const DEFAULTS = {
   ],
 };
 
+// ═══════════════════════════════════════
+// JSONBIN CONFIG — zentrale Datenspeicherung
+// ═══════════════════════════════════════
+const JB_ID  = '6a4b673ff5f4af5e296577c2';
+const JB_KEY = '$2a$10$byHUcCl8zlqMHBYq7yTT3erYUqGh5Kh7unO0GNjUOP5GgqdM96umW';
+const JB_URL = `https://api.jsonbin.io/v3/b/${JB_ID}`;
+let jbSaveTimer = null;
+let jbOnline = false; // wird auf true gesetzt sobald erste Verbindung klappt
+
+// Lokal laden (Fallback wenn kein Internet)
 function loadDB(){
   try{const d=JSON.parse(localStorage.getItem('mpv4'));return d||JSON.parse(JSON.stringify(DEFAULTS))}
   catch{return JSON.parse(JSON.stringify(DEFAULTS))}
 }
-function saveDB(){localStorage.setItem('mpv4',JSON.stringify(DB))}
+
+// Lokal speichern (immer sofort)
+function saveLocalDB(){
+  localStorage.setItem('mpv4',JSON.stringify(DB));
+}
+
+// Remote laden von JSONBin
+async function loadRemoteDB(){
+  try{
+    const r=await fetch(JB_URL+'/latest',{
+      headers:{'X-Master-Key':JB_KEY,'X-Bin-Meta':'false'},
+      cache:'no-store'
+    });
+    if(!r.ok)return null;
+    const data=await r.json();
+    if(data&&typeof data==='object'&&data.adminPin){
+      jbOnline=true;
+      return data;
+    }
+    return null;
+  }catch{return null;}
+}
+
+// Remote speichern (debounced — max 1x pro 2 Sekunden)
+function saveDB(){
+  saveLocalDB();
+  if(jbSaveTimer)clearTimeout(jbSaveTimer);
+  jbSaveTimer=setTimeout(async()=>{
+    try{
+      await fetch(JB_URL,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':JB_KEY},
+        body:JSON.stringify(DB)
+      });
+      showSyncStatus('✓ Gespeichert');
+    }catch{
+      showSyncStatus('⚠️ Offline — lokal gespeichert');
+    }
+  },2000);
+}
+
+function showSyncStatus(msg){
+  let el=document.getElementById('syncStatus');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.opacity='1';
+  setTimeout(()=>{el.style.opacity='0'},3000);
+}
+
+// App startet mit lokalen Daten, lädt dann remote nach
 let DB=loadDB();
 
 // ensure all machine hint arrays exist
@@ -742,17 +801,32 @@ function startApp(role,machine){
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('appHeader').style.display='flex';
   updateHeader();
-  if(role==='admin'){
-    document.getElementById('adminApp').style.display='block';
-    adminMachineFilter=DB.machines[0]?.id||null;
-    buildMachineTabs();renderAdmin();renderDashboard();
-  } else if(role==='sortier'){
-    document.getElementById('sortierApp').style.display='block';
-    renderSortierApp();
-  } else {
-    document.getElementById('viewerApp').style.display='block';
-    renderViewer();
-  }
+  // Remote-Daten laden und dann rendern
+  showSyncStatus('⏳ Lade Daten...');
+  loadRemoteDB().then(remoteData=>{
+    if(remoteData){
+      DB=remoteData;
+      saveLocalDB();
+      ensureHints();
+      if(!DB.sortierHints)DB.sortierHints=[];
+      if(!DB.kontakte)DB.kontakte=[];
+      if(!DB.schichtuebergaben)DB.schichtuebergaben={};
+      showSyncStatus('✓ Aktuell');
+    } else {
+      showSyncStatus('⚠️ Offline — lokale Daten');
+    }
+    if(role==='admin'){
+      document.getElementById('adminApp').style.display='block';
+      adminMachineFilter=DB.machines[0]?.id||null;
+      buildMachineTabs();renderAdmin();renderDashboard();
+    } else if(role==='sortier'){
+      document.getElementById('sortierApp').style.display='block';
+      renderSortierApp();
+    } else {
+      document.getElementById('viewerApp').style.display='block';
+      renderViewer();
+    }
+  });
 }
 function doLogout(){
   ['loginScreen','appHeader','viewerApp','sortierApp','adminApp'].forEach(id=>{
@@ -1524,6 +1598,20 @@ function showToast(msg){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
+
+// Auto-Refresh alle 30 Sekunden für alle eingeloggten Nutzer
+setInterval(async()=>{
+  if(!currentRole)return;
+  const remote=await loadRemoteDB();
+  if(!remote)return;
+  DB=remote;saveLocalDB();
+  ensureHints();
+  if(currentRole==='viewer')renderViewer();
+  if(currentRole==='sortier')renderSortierApp();
+  if(currentRole==='admin'){
+    if(currentAdminSection==='dashboard')renderDashboard();
+  }
+},30000);
 
 // INIT
 buildLoginMachines();
