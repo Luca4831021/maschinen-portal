@@ -749,7 +749,11 @@ function showSyncStatus(msg){
 let DB=loadDB();
 
 // ensure all machine hint arrays exist
-function ensureHints(){DB.machines.forEach(m=>{if(!DB.machineHints[m.id])DB.machineHints[m.id]=[];})}
+function ensureHints(){
+  if(!DB.machineHints)DB.machineHints={};
+  if(!DB.machines)DB.machines=[];
+  DB.machines.forEach(m=>{if(!DB.machineHints[m.id])DB.machineHints[m.id]=[];});
+}
 ensureHints();
 if(!DB.sortierHints)DB.sortierHints=JSON.parse(JSON.stringify(DEFAULTS.sortierHints));
 if(!DB.kontakte)DB.kontakte=JSON.parse(JSON.stringify(DEFAULTS.kontakte));
@@ -861,23 +865,32 @@ function startApp(role,machine){
   showSyncStatus('⏳ Lade Daten...');
   loadRemoteDB().then(remoteData=>{
     if(remoteData){
-      // Merge remote with DEFAULTS — remote wins but missing keys get defaults
-      const merged = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), remoteData);
-      // Keep remote machines/hints if they exist, otherwise keep defaults
-      if(remoteData.machines && remoteData.machines.length > 0) merged.machines = remoteData.machines;
-      if(remoteData.hints && remoteData.hints.length > 0) merged.hints = remoteData.hints;
-      if(remoteData.checkItems && remoteData.checkItems.length > 0) merged.checkItems = remoteData.checkItems;
-      if(remoteData.mesItems && remoteData.mesItems.length > 0) merged.mesItems = remoteData.mesItems;
-      DB = merged;
-      saveLocalDB();
-      ensureHints();
-      if(!DB.sortierHints)DB.sortierHints=[];
-      if(!DB.kontakte)DB.kontakte=[];
-      if(!DB.schichtuebergaben)DB.schichtuebergaben={};
-      showSyncStatus('✓ Aktuell');
+      try{
+        const merged=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),remoteData);
+        if(remoteData.machines&&remoteData.machines.length>0)merged.machines=remoteData.machines;
+        if(remoteData.hints!==undefined)merged.hints=remoteData.hints;
+        if(remoteData.checkItems&&remoteData.checkItems.length>0)merged.checkItems=remoteData.checkItems;
+        if(remoteData.mesItems&&remoteData.mesItems.length>0)merged.mesItems=remoteData.mesItems;
+        if(remoteData.machineHints&&Object.keys(remoteData.machineHints).length>0)merged.machineHints=remoteData.machineHints;
+        if(remoteData.sortierHints)merged.sortierHints=remoteData.sortierHints;
+        if(remoteData.kontakte)merged.kontakte=remoteData.kontakte;
+        if(remoteData.schichtuebergaben)merged.schichtuebergaben=remoteData.schichtuebergaben;
+        if(remoteData.adminPin)merged.adminPin=remoteData.adminPin;
+        if(remoteData.sortierPin)merged.sortierPin=remoteData.sortierPin;
+        DB=merged;
+        saveLocalDB();
+        showSyncStatus('✓ Aktuell');
+      }catch(e){
+        console.warn('Merge error:',e);
+      }
     } else {
       showSyncStatus('⚠️ Offline — lokale Daten');
     }
+    // IMMER rendern — egal ob remote oder offline
+    ensureHints();
+    if(!DB.sortierHints)DB.sortierHints=[];
+    if(!DB.kontakte)DB.kontakte=[];
+    if(!DB.schichtuebergaben)DB.schichtuebergaben={};
     if(role==='admin'){
       document.getElementById('adminApp').style.display='block';
       adminMachineFilter=DB.machines[0]?.id||null;
@@ -1311,11 +1324,13 @@ function addModalFoto(input){
   const img=new Image();
   const url=URL.createObjectURL(file);
   img.onload=()=>{
-    const max=900;let w=img.width,h=img.height;
-    if(w>=h&&w>max){h=h*max/w;w=max}else if(h>w&&h>max){w=w*max/h;h=max}
-    const c=document.createElement('canvas');c.width=w;c.height=h;
-    c.getContext('2d').drawImage(img,0,0,w,h);
-    modalFotos.push(c.toDataURL('image/jpeg',.75));
+    const max=600;let w=img.width,h=img.height;
+    if(w>=h&&w>max){h=Math.round(h*max/w);w=max}else if(h>w&&h>max){w=Math.round(w*max/h);h=max}
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    const compressed=canvas.toDataURL('image/jpeg',.55);
+    if(compressed.length>80000){showToast('⚠️ Bild zu groß');return;}
+    modalFotos.push(compressed);
     URL.revokeObjectURL(url);
     renderModalFotoPrev();
   };
@@ -1372,7 +1387,7 @@ function openModal(type,id=null){
     <div class="form-group">
       <label class="form-label">📸 Bilder (max. 6)</label>
       <button class="foto-add-btn" onclick="document.getElementById('modalFotoInput').click()">📷 Foto aufnehmen / auswählen</button>
-      <input type="file" id="modalFotoInput" accept="image/*" capture="environment" style="display:none" onchange="addModalFoto(this)">
+      <input type="file" id="modalFotoInput" accept="image/*" style="display:none" onchange="addModalFoto(this)">
       <div class="foto-prev" id="modalFotoPrev"></div>
     </div>`;
   } else if(type==='sortier'){
@@ -1392,7 +1407,7 @@ function openModal(type,id=null){
     <div class="form-group">
       <label class="form-label">📸 Fehlerbilder (max. 6)</label>
       <button class="foto-add-btn" onclick="document.getElementById('modalFotoInput').click()">📷 Foto aufnehmen / auswählen</button>
-      <input type="file" id="modalFotoInput" accept="image/*" capture="environment" style="display:none" onchange="addModalFoto(this)">
+      <input type="file" id="modalFotoInput" accept="image/*" style="display:none" onchange="addModalFoto(this)">
       <div class="foto-prev" id="modalFotoPrev"></div>
     </div>`;
     setTimeout(()=>renderModalFotoPrev(),50);
