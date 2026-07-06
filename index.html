@@ -88,8 +88,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .mes-row:last-child{border-bottom:none}
 .mes-label{color:var(--muted)}
 .mes-code{font-family:monospace;font-size:15px;font-weight:700;background:var(--surface2);padding:3px 10px;border-radius:5px}
-.check-row{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--surface2);border-radius:9px;margin-bottom:7px;cursor:pointer}
+.check-row{padding:11px 13px;background:var(--surface2);border-radius:9px;margin-bottom:8px;font-size:14px;line-height:1.5;border-left:3px solid var(--green);cursor:pointer;display:flex;align-items:center;gap:11px}
 .check-row:active{background:var(--border)}
+.check-row.done-row{border-left-color:var(--border);opacity:.7}
 .cbox{width:22px;height:22px;border:2px solid var(--border);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .cbox.done{background:var(--green);border-color:var(--green)}
 .cbox.done::after{content:'✓';color:white;font-size:12px;font-weight:700}
@@ -860,7 +861,14 @@ function startApp(role,machine){
   showSyncStatus('⏳ Lade Daten...');
   loadRemoteDB().then(remoteData=>{
     if(remoteData){
-      DB=remoteData;
+      // Merge remote with DEFAULTS — remote wins but missing keys get defaults
+      const merged = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), remoteData);
+      // Keep remote machines/hints if they exist, otherwise keep defaults
+      if(remoteData.machines && remoteData.machines.length > 0) merged.machines = remoteData.machines;
+      if(remoteData.hints && remoteData.hints.length > 0) merged.hints = remoteData.hints;
+      if(remoteData.checkItems && remoteData.checkItems.length > 0) merged.checkItems = remoteData.checkItems;
+      if(remoteData.mesItems && remoteData.mesItems.length > 0) merged.mesItems = remoteData.mesItems;
+      DB = merged;
       saveLocalDB();
       ensureHints();
       if(!DB.sortierHints)DB.sortierHints=[];
@@ -965,15 +973,18 @@ function renderChecklistV(){
   const el=document.getElementById('vChecklist');
   el.innerHTML=DB.checkItems.map(c=>{
     const done=!!checkStates[c.id];
-    return`<div class="check-row" onclick="toggleCheck(${c.id})"><div class="cbox${done?' done':''}" id="cb${c.id}"></div><div class="clabel${done?' done':''}" id="cl${c.id}">${c.text}</div></div>`;
+    return`<div class="check-row${done?' done-row':''}" id="cr${c.id}" onclick="toggleCheck(${c.id})"><div class="cbox${done?' done':''}" id="cb${c.id}"></div><div class="clabel${done?' done':''}" id="cl${c.id}">${c.text}</div></div>`;
   }).join('')||empty('Keine Punkte');
 }
 function toggleCheck(id){
   checkStates[id]=!checkStates[id];
   const done=checkStates[id];
-  const b=document.getElementById('cb'+id),l=document.getElementById('cl'+id);
+  const b=document.getElementById('cb'+id);
+  const l=document.getElementById('cl'+id);
+  const r=document.getElementById('cr'+id);
   if(b)b.className='cbox'+(done?' done':'');
   if(l)l.className='clabel'+(done?' done':'');
+  if(r)r.className='check-row'+(done?' done-row':'');
   updateKachelSubs();
 }
 function resetCheck(){checkStates={};renderChecklistV()}
@@ -1659,7 +1670,12 @@ setInterval(async()=>{
   if(!currentRole)return;
   const remote=await loadRemoteDB();
   if(!remote)return;
-  DB=remote;saveLocalDB();
+  const merged=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),remote);
+  if(remote.machines&&remote.machines.length>0)merged.machines=remote.machines;
+  if(remote.hints&&remote.hints.length>0)merged.hints=remote.hints;
+  if(remote.checkItems&&remote.checkItems.length>0)merged.checkItems=remote.checkItems;
+  if(remote.mesItems&&remote.mesItems.length>0)merged.mesItems=remote.mesItems;
+  DB=merged;saveLocalDB();
   ensureHints();
   if(currentRole==='viewer')renderViewer();
   if(currentRole==='sortier')renderSortierApp();
