@@ -236,6 +236,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .kachel-icon{font-size:28px;margin-bottom:6px}
 .kachel-label{font-size:13px;font-weight:600;color:var(--text)}
 .kachel-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.machine-search-item{padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:space-between}
+.machine-search-item:last-child{border-bottom:none}
+.machine-search-item:hover,.machine-search-item.selected-item{background:var(--accent);color:white}
+.machine-search-item:hover .msi-halle,.machine-search-item.selected-item .msi-halle{color:rgba(255,255,255,.7)}
+.msi-halle{font-size:11px;color:var(--muted)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#052e16;border:1px solid var(--green);color:#86efac;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 @media(max-width:600px){
@@ -252,9 +257,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   <div class="login-box">
     <div class="login-logo">🏭</div>
     <div class="login-title">Maschinen Portal</div>
-    <div class="login-sub">Maschine und Rolle wählen, dann PIN eingeben</div>
-    <div class="pin-label" style="margin-bottom:8px">Maschine wählen</div>
-    <div class="machine-select-grid" id="machineGrid"></div>
+    <div class="login-sub">Rolle wählen und PIN eingeben</div>
+
+    <!-- ROLLE -->
     <div class="pin-label" style="margin-bottom:8px">Rolle</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
       <div class="role-btn selected" id="roleViewer" onclick="selRole('viewer')">
@@ -267,6 +272,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
         <div class="r-icon">⚙️</div><div class="r-name">Schichtführer</div><div class="r-hint">Admin</div>
       </div>
     </div>
+
+    <!-- MASCHINE SUCHEN (nur für Bediener) -->
+    <div id="machineSearchWrap">
+      <div class="pin-label" style="margin-bottom:8px">Maschine suchen</div>
+      <input class="form-input" id="machineSearchLogin" placeholder="z.B. M-01 oder Spritzguss..." oninput="searchMachineLogin(this.value)" autocomplete="off" style="margin-bottom:8px;font-size:15px;padding:11px 13px">
+      <div id="machineSearchResults" style="max-height:180px;overflow-y:auto;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);display:none"></div>
+      <div id="machineSelected" style="display:none;background:#0e2a1f;border:1px solid #22c55e;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none">
+        <div style="font-size:11px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Ausgewählt</div>
+        <div id="machineSelectedLabel" style="font-size:15px;font-weight:600;color:var(--text)"></div>
+      </div>
+    </div>
+
+    <!-- PIN -->
     <div class="pin-label">PIN</div>
     <input class="pin-input" id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="····" onkeyup="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Anmelden →</button>
@@ -646,29 +664,56 @@ tick();setInterval(tick,1000);
 // LOGIN
 // ═══════════════════════════════════════
 function buildLoginMachines(){
-  const grid=document.getElementById('machineGrid');
-  grid.innerHTML=DB.machines.map((m,i)=>`
-    <div class="msel-btn${i===0?' selected':''}" id="msel-${m.id}" onclick="selMachine('${m.id}')">
-      <div class="mb-nr">${m.nr}</div>
-      <div class="mb-name">${m.name}</div>
-    </div>`).join('');
-  currentMachine=DB.machines[0];
+  // no grid needed anymore — using search
+  currentMachine=null;
   updateLoginHint();
 }
-function selMachine(id){
+function searchMachineLogin(q){
+  const res=document.getElementById('machineSearchResults');
+  const wrap=document.getElementById('machineSearchWrap');
+  if(!q.trim()){res.style.display='none';return}
+  const matches=DB.machines.filter(m=>
+    m.nr.toLowerCase().includes(q.toLowerCase())||
+    m.name.toLowerCase().includes(q.toLowerCase())
+  );
+  if(!matches.length){
+    res.style.display='block';
+    res.innerHTML=`<div style="padding:12px 14px;font-size:13px;color:var(--muted)">Keine Maschine gefunden</div>`;
+    return;
+  }
+  res.style.display='block';
+  res.innerHTML=matches.map(m=>{
+    const h=HALLEN.find(x=>x.id===m.halle);
+    return`<div class="machine-search-item" onclick="selMachineLogin('${m.id}')">
+      <span>${m.nr} — ${m.name}</span>
+      <span class="msi-halle">${h?h.label:''}</span>
+    </div>`;
+  }).join('');
+}
+function selMachineLogin(id){
   currentMachine=DB.machines.find(m=>m.id===id);
-  document.querySelectorAll('.msel-btn').forEach(b=>b.classList.remove('selected'));
-  const el=document.getElementById('msel-'+id);
-  if(el)el.classList.add('selected');
-  document.getElementById('pinInput').value='';
+  const res=document.getElementById('machineSearchResults');
+  const inp=document.getElementById('machineSearchLogin');
+  const sel=document.getElementById('machineSelected');
+  const lbl=document.getElementById('machineSelectedLabel');
+  if(res)res.style.display='none';
+  if(inp)inp.value='';
+  if(sel){sel.style.display='block';sel.style.cssText='display:block;background:#0e2a1f;border:1px solid #22c55e;border-radius:8px;padding:10px 14px;margin-bottom:12px';}
+  if(lbl&&currentMachine)lbl.textContent=`${currentMachine.nr} — ${currentMachine.name}`;
+  document.getElementById('pinInput').focus();
   updateLoginHint();
 }
+function selMachine(id){selMachineLogin(id)}
 function selRole(r){
   selectedRoleLogin=r;
   document.getElementById('roleViewer').classList.toggle('selected',r==='viewer');
   document.getElementById('roleSortier').classList.toggle('selected',r==='sortier');
   document.getElementById('roleAdmin').classList.toggle('selected',r==='admin');
   document.getElementById('pinInput').value='';
+  // Maschinen-Suche nur für Bediener anzeigen
+  const wrap=document.getElementById('machineSearchWrap');
+  if(wrap)wrap.style.display=r==='viewer'?'block':'none';
+  if(r!=='viewer'){currentMachine=null;}
   updateLoginHint();
 }
 function updateLoginHint(){
@@ -716,8 +761,12 @@ function doLogout(){
   });
   document.getElementById('pinInput').value='';
   document.getElementById('loginErr').textContent='';
+  const msl=document.getElementById('machineSearchLogin');if(msl)msl.value='';
+  const msr=document.getElementById('machineSearchResults');if(msr)msr.style.display='none';
+  const mss=document.getElementById('machineSelected');if(mss)mss.style.display='none';
   currentRole='';currentMachine=null;checkStates={};
   buildLoginMachines();
+  selRole('viewer');
 }
 function updateHeader(){
   const mt=document.getElementById('headerMachineTag');
