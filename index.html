@@ -269,6 +269,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .kachel-icon{font-size:28px;margin-bottom:6px}
 .kachel-label{font-size:13px;font-weight:600;color:var(--text)}
 .kachel-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.folder-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.folder-head{padding:13px 15px;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.folder-head:active{background:var(--surface2)}
+.folder-arrow{color:var(--muted);transition:transform .2s;font-size:18px;margin-left:auto}
+.folder-arrow.open{transform:rotate(90deg)}
+.folder-body{display:none;border-top:1px solid var(--border)}
+.folder-body.open{display:block}
+.doc-item{display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text)}
+.doc-item:last-child{border-bottom:none}
+.doc-item:active{background:var(--surface2)}
+.doc-icon{font-size:20px;flex-shrink:0}
+.doc-info{flex:1;min-width:0}
+.doc-title{font-size:14px;font-weight:500;margin-bottom:2px}
+.doc-desc{font-size:12px;color:var(--muted)}
+.doc-arrow{color:var(--muted);font-size:16px;flex-shrink:0}
 .machine-search-item{padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:space-between}
 .machine-search-item:last-child{border-bottom:none}
 .machine-search-item:hover,.machine-search-item.selected-item{background:var(--accent);color:white}
@@ -367,8 +382,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div class="vsidebar-item" id="vs-machine" onclick="openKachel('machine')"><span class="vi">🔩</span>Maschine</div>
       <div class="sidebar-section">Bereiche</div>
       <div class="vsidebar-item" id="vs-mes" onclick="openKachel('mes')"><span class="vi">🖥️</span>MES</div>
-      <div class="vsidebar-item" id="vs-checklist" onclick="openKachel('checklist')"><span class="vi">✅</span>Checkliste<span class="vsidebar-badge" id="kachelCheckSub"></span></div>
-      <div class="vsidebar-item" id="vs-tutorials" onclick="openKachel('tutorials')"><span class="vi">📖</span>Tutorials</div>
+      <div class="vsidebar-item" id="vs-docs" onclick="openKachel('docs')"><span class="vi">📁</span>Dokumente</div>
       <div class="vsidebar-item" id="vs-kontakte" onclick="openKachel('kontakte')"><span class="vi">📞</span>Kontakte</div>
       <div class="vsidebar-item" id="vs-uebergabe" onclick="openKachel('uebergabe')"><span class="vi">🔄</span>Übergabe</div>
     </div>
@@ -392,15 +406,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
         <div class="card"><div class="card-title">Stillstandzeiten</div><div id="vMesStill"></div></div>
       </div>
 
-      <!-- Checkliste -->
-      <div id="vt-checklist" class="vpanel">
-        <div class="card"><div class="card-title">Schichtstart Checkliste</div>
-        <div id="vChecklist"></div>
-        <button class="reset-small" onclick="resetCheck()">↺ Zurücksetzen</button></div>
-      </div>
-
-      <!-- Tutorials -->
-      <div id="vt-tutorials" class="vpanel"><div id="vTutorials"></div></div>
+      <!-- Dokumente -->
+      <div id="vt-docs" class="vpanel"><div id="vDocs"></div></div>
 
       <!-- Kontakte -->
       <div id="vt-kontakte" class="vpanel">
@@ -452,8 +459,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div class="sidebar-item" onclick="aNav('aMachine')"><span style="font-size:18px;display:block">🔩</span>Maschinen</div>
       <div class="sidebar-item" onclick="aNav('aSortier')"><span style="font-size:18px;display:block">🔍</span>Sortierung</div>
       <div class="sidebar-item" onclick="aNav('aMes')"><span style="font-size:18px;display:block">🖥️</span>MES</div>
-      <div class="sidebar-item" onclick="aNav('aChecklist')"><span style="font-size:18px;display:block">✅</span>Checkliste</div>
-      <div class="sidebar-item" onclick="aNav('aTutorials')"><span style="font-size:18px;display:block">📖</span>Tutorials</div>
+      <div class="sidebar-item" onclick="aNav('aDocs')"><span style="font-size:18px;display:block">📁</span>Dokumente</div>
       <div class="sidebar-item" onclick="aNav('aKontakte')"><span style="font-size:18px;display:block">📞</span>Kontakte</div>
       <div class="sidebar-item" onclick="aNav('aUebergabe')"><span style="font-size:18px;display:block">🔄</span>Übergabe</div>
       <div class="sidebar-section">System</div>
@@ -515,16 +521,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
         <div id="adminMesList"></div>
       </div>
 
-      <!-- CHECKLISTE -->
-      <div id="sec-aChecklist" class="admin-panel">
-        <div class="section-head"><h2>✅ Checkliste</h2><button class="add-btn" onclick="openModal('check')">+ Punkt</button></div>
-        <div id="adminCheckList"></div>
-      </div>
-
-      <!-- TUTORIALS -->
-      <div id="sec-aTutorials" class="admin-panel">
-        <div class="section-head"><h2>📖 Tutorials</h2><button class="add-btn" onclick="openModal('tutorial')">+ Tutorial</button></div>
-        <div id="adminTutorialList"></div>
+      <!-- DOKUMENTE -->
+      <div id="sec-aDocs" class="admin-panel">
+        <div class="section-head"><h2>📁 Dokumentenbibliothek</h2><button class="add-btn" onclick="openModal('folder')">+ Ordner</button></div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Erstelle Ordner z.B. "Sauberkeit", "MES Zeitarten", "Sicherheit" und füge darin Dokumente, Links, Bilder oder Videos hinzu.</p>
+        <div id="adminDocsList"></div>
       </div>
 
       <!-- KONTAKTE -->
@@ -758,13 +759,14 @@ ensureHints();
 if(!DB.sortierHints)DB.sortierHints=JSON.parse(JSON.stringify(DEFAULTS.sortierHints));
 if(!DB.kontakte)DB.kontakte=JSON.parse(JSON.stringify(DEFAULTS.kontakte));
 if(!DB.schichtuebergaben)DB.schichtuebergaben={};
+if(!DB.docs)DB.docs=JSON.parse(JSON.stringify(DEFAULTS.docs||[]));
 
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
 let currentRole='',currentMachine=null,selectedRoleLogin='viewer';
 let checkStates={};
-let editingType='',editingId=null;
+let editingType='',editingId=null,editingFolderId=null;
 let adminMachineFilter=null;
 let currentAdminSection='dashboard';
 let modalFotos=[];
@@ -891,6 +893,7 @@ function startApp(role,machine){
     if(!DB.sortierHints)DB.sortierHints=[];
     if(!DB.kontakte)DB.kontakte=[];
     if(!DB.schichtuebergaben)DB.schichtuebergaben={};
+if(!DB.docs)DB.docs=JSON.parse(JSON.stringify(DEFAULTS.docs||[]));
     if(role==='admin'){
       document.getElementById('adminApp').style.display='block';
       adminMachineFilter=DB.machines[0]?.id||null;
@@ -962,11 +965,9 @@ function renderViewer(){
   const still=DB.mesItems.filter(m=>m.category==='still');
   document.getElementById('vMesProd').innerHTML=prod.map(m=>`<div class="mes-row"><span>${m.label}</span><span class="mes-code">${m.code}</span></div>`).join('')||empty('Leer');
   document.getElementById('vMesStill').innerHTML=still.map(m=>`<div class="mes-row"><span>${m.label}</span><span class="mes-code">${m.code}</span></div>`).join('')||empty('Leer');
-  renderChecklistV();
-  renderTutorialsV();
+  renderDocsV();
   renderKontakteV();
   renderUebergabeV();
-  updateKachelSubs();
 }
 
 function renderTutorialsV(){
@@ -1049,11 +1050,88 @@ function renderSortierApp(){
 }
 
 // ═══════════════════════════════════════
+// DOKUMENTE VIEWER
+// ═══════════════════════════════════════
+const docTypeIcon={link:'🔗',pdf:'📄',image:'🖼️',video:'🎬',text:'📝'};
+function renderDocsV(){
+  const el=document.getElementById('vDocs');
+  if(!el)return;
+  const docs=DB.docs||[];
+  if(!docs.length){el.innerHTML=empty('Noch keine Dokumente hinterlegt');return;}
+  el.innerHTML=docs.map(folder=>`
+    <div class="folder-card">
+      <div class="folder-head" onclick="toggleFolder(${folder.id},this)">
+        <span>${folder.icon||'📁'}</span>
+        <span>${folder.name}</span>
+        <span style="font-size:11px;color:var(--muted);font-weight:400">${(folder.items||[]).length} Einträge</span>
+        <span class="folder-arrow" id="farr${folder.id}">›</span>
+      </div>
+      <div class="folder-body" id="fbod${folder.id}">
+        ${(folder.items||[]).length?folder.items.map(item=>`
+          <a class="doc-item" href="${item.url||'#'}" target="${item.url?'_blank':'_self'}" onclick="${!item.url?'return false':''}">
+            <div class="doc-icon">${docTypeIcon[item.type]||'📄'}</div>
+            <div class="doc-info">
+              <div class="doc-title">${item.title}</div>
+              ${item.desc?`<div class="doc-desc">${item.desc}</div>`:''}
+            </div>
+            ${item.url?'<div class="doc-arrow">›</div>':''}
+          </a>`).join(''):
+          `<div style="padding:14px 15px;font-size:13px;color:var(--muted)">Noch keine Einträge in diesem Ordner</div>`
+        }
+      </div>
+    </div>`).join('');
+}
+function toggleFolder(id){
+  const b=document.getElementById('fbod'+id);
+  const a=document.getElementById('farr'+id);
+  const o=b.classList.toggle('open');
+  a.classList.toggle('open',o);
+}
+function renderAdminDocs(){
+  const el=document.getElementById('adminDocsList');
+  if(!el)return;
+  const docs=DB.docs||[];
+  el.innerHTML=docs.map(folder=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:600">${folder.icon||'📁'} ${folder.name}</div>
+        <div style="display:flex;gap:6px">
+          <button class="add-btn" style="font-size:12px;padding:5px 10px" onclick="openModal('docitem',null,'${folder.id}')">+ Eintrag</button>
+          <button class="btn-edit" onclick="openModal('folder','${folder.id}')">✏️</button>
+          <button class="btn-del" onclick="delFolder('${folder.id}')">🗑</button>
+        </div>
+      </div>
+      ${(folder.items||[]).length?folder.items.map(item=>`
+        <div class="admin-item">
+          <div class="ai-left">
+            <div class="ai-title">${docTypeIcon[item.type]||'📄'} ${item.title}</div>
+            <div class="ai-sub">${item.desc||''} ${item.url?'· '+item.url.slice(0,40)+'...':''}</div>
+          </div>
+          <div class="ai-actions">
+            <button class="btn-edit" onclick="openModal('docitem',${item.id},'${folder.id}')">✏️</button>
+            <button class="btn-del" onclick="delDocItem('${folder.id}',${item.id})">🗑</button>
+          </div>
+        </div>`).join(''):`<div style="font-size:13px;color:var(--muted)">Noch leer</div>`}
+    </div>`).join('')||empty('Noch keine Ordner');
+}
+function delFolder(fid){
+  if(!confirm('Ordner löschen?'))return;
+  DB.docs=(DB.docs||[]).filter(f=>f.id!=fid);
+  saveDB();renderAdminDocs();showToast('Ordner gelöscht');
+}
+function delDocItem(fid,iid){
+  if(!confirm('Eintrag löschen?'))return;
+  const f=(DB.docs||[]).find(x=>x.id==fid);
+  if(f)f.items=(f.items||[]).filter(i=>i.id!=iid);
+  saveDB();renderAdminDocs();showToast('Gelöscht');
+}
+
+// ═══════════════════════════════════════
 // ADMIN RENDER
 // ═══════════════════════════════════════
 function renderAdmin(){
   renderAdminHints();renderAdminSortier();
-  renderAdminMes();renderAdminCheck();renderAdminTutorials();renderMachineSettings();
+  renderAdminMes();renderAdminDocs();renderMachineSettings();
   renderAdminKontakte();renderAdminUebergaben();
   buildMachineTabs();renderAdminMachine();
 }
@@ -1155,7 +1233,7 @@ function renderDashboard(){
 function aNav(sec){
   currentAdminSection=sec;
   document.querySelectorAll('.sidebar-item').forEach((el,i)=>{
-    const secs=['dashboard','aHints','aMachine','aSortier','aMes','aChecklist','aTutorials','aKontakte','aUebergabe','aSettings'];
+    const secs=['dashboard','aHints','aMachine','aSortier','aMes','aDocs','aKontakte','aUebergabe','aSettings'];
     el.classList.toggle('active',secs[i]===sec);
   });
   document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
@@ -1357,6 +1435,8 @@ function openModal(type,id=null){
   else if(type==='check')item=id?DB.checkItems.find(x=>x.id===id):null;
   else if(type==='tutorial')item=id?DB.tutorials.find(x=>x.id===id):null;
   else if(type==='kontakt')item=id?(DB.kontakte||[]).find(x=>x.id===id):null;
+  else if(type==='folder'){const docs=DB.docs||[];item=id?docs.find(x=>x.id==id):null;}
+  else if(type==='docitem'){const fid=arguments[2];const f=(DB.docs||[]).find(x=>x.id==fid);item=id&&f?(f.items||[]).find(x=>x.id===id):null;if(!editingFolderId)editingFolderId=fid;}
   else if(type==='machine')item=id?DB.machines.find(x=>x.id===id):null;
 
   let title='',body='';
@@ -1435,6 +1515,23 @@ function openModal(type,id=null){
       <input class="form-input" id="fFileUrl" value="${item?.fileUrl||''}" style="margin-bottom:5px">
       <input class="form-input" id="fFileName" value="${item?.fileName||''}">
     </div>`;
+  } else if(type==='folder'){
+    title=id?'Ordner bearbeiten':'Neuer Ordner';
+    body=`<div class="form-group"><label class="form-label">Ordnername</label><input class="form-input" id="fFolderName" value="${item?item.name:''}" placeholder="z.B. Sauberkeit, Sicherheit, MES"></div>
+    <div class="form-group"><label class="form-label">Icon (Emoji)</label><input class="form-input" id="fFolderIcon" value="${item?item.icon:'📁'}" placeholder="📁"></div>`;
+  } else if(type==='docitem'){
+    editingFolderId=arguments[2]||editingFolderId;
+    title=id?'Eintrag bearbeiten':'Neuer Eintrag';
+    body=`<div class="form-group"><label class="form-label">Titel</label><input class="form-input" id="fDocTitle" value="${item?item.title:''}" placeholder="z.B. Reinigungsanweisung"></div>
+    <div class="form-group"><label class="form-label">Typ</label><select class="form-select" id="fDocType">
+      <option value="link" ${item?.type==='link'?'selected':''}>🔗 Link / URL</option>
+      <option value="pdf" ${item?.type==='pdf'?'selected':''}>📄 PDF</option>
+      <option value="image" ${item?.type==='image'?'selected':''}>🖼️ Bild</option>
+      <option value="video" ${item?.type==='video'?'selected':''}>🎬 Video</option>
+      <option value="text" ${item?.type==='text'?'selected':''}>📝 Text / Info</option>
+    </select></div>
+    <div class="form-group"><label class="form-label">URL / Link (optional)</label><input class="form-input" id="fDocUrl" value="${item?item.url||'':''}" placeholder="https://... oder SharePoint-Link"></div>
+    <div class="form-group"><label class="form-label">Beschreibung</label><input class="form-input" id="fDocDesc" value="${item?item.desc||'':''}" placeholder="Kurze Beschreibung"></div>`;
   } else if(type==='kontakt'){
     title=id?'Kontakt bearbeiten':'Neue Person';
     body=`<div class="form-row">
@@ -1491,6 +1588,21 @@ function saveModal(){
     if(!obj.title){showToast('Titel eingeben');return}
     if(editingId){const i=DB.tutorials.findIndex(x=>x.id===editingId);if(i>=0)DB.tutorials[i]={...DB.tutorials[i],...obj}}
     else DB.tutorials.push({id:Date.now(),...obj});
+  } else if(editingType==='folder'){
+    const name=v('fFolderName'),icon=v('fFolderIcon')||'📁';
+    if(!name){showToast('Name eingeben');return}
+    if(!DB.docs)DB.docs=[];
+    if(editingId){const f=DB.docs.find(x=>x.id==editingId);if(f){f.name=name;f.icon=icon}}
+    else DB.docs.push({id:Date.now(),name,icon,items:[]});
+  } else if(editingType==='docitem'){
+    const obj={title:v('fDocTitle'),type:v('fDocType'),url:v('fDocUrl'),desc:v('fDocDesc')};
+    if(!obj.title){showToast('Titel eingeben');return}
+    if(!DB.docs)DB.docs=[];
+    const f=DB.docs.find(x=>x.id==editingFolderId);
+    if(!f){showToast('Ordner nicht gefunden');return}
+    if(!f.items)f.items=[];
+    if(editingId){const i=f.items.findIndex(x=>x.id===editingId);if(i>=0)f.items[i]={...f.items[i],...obj}}
+    else f.items.push({id:Date.now(),...obj});
   } else if(editingType==='kontakt'){
     const obj={vorname:v('fVorname'),nachname:v('fNachname'),position:v('fPosition'),durchwahl:v('fDurchwahl')};
     if(!obj.nachname){showToast('Nachname eingeben');return}
@@ -1604,6 +1716,7 @@ function saveUebergabe(){
   if(!txt){showToast('Bitte Text eingeben');return}
   const mid=currentMachine?.id||'general';
   if(!DB.schichtuebergaben)DB.schichtuebergaben={};
+if(!DB.docs)DB.docs=JSON.parse(JSON.stringify(DEFAULTS.docs||[]));
   if(!DB.schichtuebergaben[mid])DB.schichtuebergaben[mid]=[];
   const now=new Date();
   DB.schichtuebergaben[mid].unshift({
