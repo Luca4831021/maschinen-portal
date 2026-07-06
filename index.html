@@ -341,8 +341,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
     <!-- MASCHINE WÄHLEN (nur für Bediener) -->
     <div id="machineSearchWrap">
       <div class="pin-label" style="margin-bottom:8px">Maschine wählen</div>
-      <input class="form-input" id="machineSearchLogin" placeholder="Suchen..." oninput="searchMachineLogin(this.value)" autocomplete="off" style="margin-bottom:6px;font-size:14px;padding:9px 12px">
-      <div id="machineSearchResults" style="max-height:220px;overflow-y:auto;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);display:block"></div>
+      <input class="form-input" id="machineSearchLogin" placeholder="Suchen..." oninput="searchMachineLogin(this.value)" onfocus="showAllMachines()" autocomplete="off" style="margin-bottom:6px;font-size:14px;padding:9px 12px">
+      <div id="machineSearchResults" style="max-height:220px;overflow-y:auto;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);display:none"></div>
       <div id="machineSelected" style="display:none;background:#0e2a1f;border:1px solid #22c55e;border-radius:8px;padding:10px 14px;margin-bottom:12px">
         <div style="font-size:11px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">✓ Ausgewählt</div>
         <div id="machineSelectedLabel" style="font-size:15px;font-weight:600;color:var(--text)"></div>
@@ -451,7 +451,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div class="sidebar-item" onclick="aNav('aHints')"><span style="font-size:18px;display:block">⚠️</span>Hinweise</div>
       <div class="sidebar-item" onclick="aNav('aMachine')"><span style="font-size:18px;display:block">🔩</span>Maschinen</div>
       <div class="sidebar-item" onclick="aNav('aSortier')"><span style="font-size:18px;display:block">🔍</span>Sortierung</div>
-      <div class="sidebar-item" onclick="aNav('aMes')"><span style="font-size:18px;display:block">🖥️</span>MES</div>
       <div class="sidebar-item" onclick="aNav('aDocs')"><span style="font-size:18px;display:block">📁</span>Dokumente</div>
       <div class="sidebar-item" onclick="aNav('aKontakte')"><span style="font-size:18px;display:block">📞</span>Kontakte</div>
       <div class="sidebar-item" onclick="aNav('aUebergabe')"><span style="font-size:18px;display:block">🔄</span>Übergabe</div>
@@ -501,20 +500,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
         <div id="adminMachineList"></div>
       </div>
 
-      <!-- SORTIERUNG -->
+            <!-- DOKUMENTE -->
       <div id="sec-aSortier" class="admin-panel">
         <div class="section-head"><h2>🔍 Sortierbereich Hinweise</h2><button class="add-btn" onclick="openModal('sortier')">+ Hinweis</button></div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Fehlerbilder und Sortieranweisungen mit Fotos — sichtbar wenn man im Hallenplan auf "Sortierung" klickt.</p>
         <div id="adminSortierList"></div>
       </div>
 
-      <!-- MES -->
-      <div id="sec-aMes" class="admin-panel">
-        <div class="section-head"><h2>🖥️ MES Zeitarten</h2><button class="add-btn" onclick="openModal('mes')">+ Zeitart</button></div>
-        <div id="adminMesList"></div>
-      </div>
 
-      <!-- DOKUMENTE -->
+
+            <!-- DOKUMENTE -->
       <div id="sec-aDocs" class="admin-panel">
         <div class="section-head"><h2>📁 Dokumentenbibliothek</h2><button class="add-btn" onclick="openModal('folder')">+ Ordner</button></div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Erstelle Ordner z.B. "Sauberkeit", "MES Zeitarten", "Sicherheit" und füge darin Dokumente, Links, Bilder oder Videos hinzu.</p>
@@ -780,17 +775,16 @@ tick();setInterval(tick,1000);
 function buildLoginMachines(){
   currentMachine=null;
   updateLoginHint();
-  // Show all machines immediately
-  setTimeout(()=>{
-    if(document.getElementById('loginScreen').style.display!=='none'){
-      const res=document.getElementById('machineSearchResults');
-      if(res)renderMachineDropdown(DB.machines,res);
-    }
-  },100);
+
 }
 function showAllMachines(){
   const res=document.getElementById('machineSearchResults');
   renderMachineDropdown(DB.machines,res);
+  res.style.display='block';
+}
+function hideMachineDropdown(){
+  const res=document.getElementById('machineSearchResults');
+  if(res)res.style.display='none';
 }
 function renderMachineDropdown(matches,res){
   if(!matches.length){
@@ -849,9 +843,7 @@ function selRole(r){
   document.getElementById('pinInput').value='';
   const wrap=document.getElementById('machineSearchWrap');
   if(wrap)wrap.style.display=r==='viewer'?'block':'none';
-  if(r==='viewer'){
-    setTimeout(()=>{const res=document.getElementById('machineSearchResults');if(res)renderMachineDropdown(DB.machines,res);},50);
-  } else {currentMachine=null;}
+  if(r!=='viewer'){currentMachine=null;}
   updateLoginHint();
 }
 function updateLoginHint(){
@@ -932,7 +924,7 @@ function doLogout(){
   document.getElementById('pinInput').value='';
   document.getElementById('loginErr').textContent='';
   const msl=document.getElementById('machineSearchLogin');if(msl)msl.value='';
-  const msr=document.getElementById('machineSearchResults');if(msr){msr.innerHTML='';msr.style.display='block';}
+  const msr=document.getElementById('machineSearchResults');if(msr){msr.innerHTML='';msr.style.display='none';}
   const mss=document.getElementById('machineSelected');if(mss)mss.style.display='none';
   currentRole='';currentMachine=null;checkStates={};
   buildLoginMachines();
@@ -978,10 +970,7 @@ function renderViewer(){
   document.getElementById('vGeneralHints').innerHTML=DB.hints.length?DB.hints.map(h=>hintHTML(h)).join(''):empty('Keine Hinweise');
   const mhints=DB.machineHints[currentMachine?.id]||[];
   document.getElementById('vMachineHints').innerHTML=mhints.length?mhints.map(h=>hintHTML(h)).join(''):empty('Keine Maschinenhinweise');
-  const prod=DB.mesItems.filter(m=>m.category==='prod');
-  const still=DB.mesItems.filter(m=>m.category==='still');
-  document.getElementById('vMesProd').innerHTML=prod.map(m=>`<div class="mes-row"><span>${m.label}</span><span class="mes-code">${m.code}</span></div>`).join('')||empty('Leer');
-  document.getElementById('vMesStill').innerHTML=still.map(m=>`<div class="mes-row"><span>${m.label}</span><span class="mes-code">${m.code}</span></div>`).join('')||empty('Leer');
+
   renderDocsV();
   renderKontakteV();
   renderUebergabeV();
@@ -1148,7 +1137,7 @@ function delDocItem(fid,iid){
 // ═══════════════════════════════════════
 function renderAdmin(){
   renderAdminHints();renderAdminSortier();
-  renderAdminMes();renderAdminDocs();renderMachineSettings();
+  renderAdminDocs();renderMachineSettings();
   renderAdminKontakte();renderAdminUebergaben();
   buildMachineTabs();renderAdminMachine();
 }
@@ -1250,7 +1239,7 @@ function renderDashboard(){
 function aNav(sec){
   currentAdminSection=sec;
   document.querySelectorAll('.sidebar-item').forEach((el,i)=>{
-    const secs=['dashboard','aHints','aMachine','aSortier','aMes','aDocs','aKontakte','aUebergabe','aSettings'];
+    const secs=['dashboard','aHints','aMachine','aSortier','aDocs','aKontakte','aUebergabe','aSettings'];
     el.classList.toggle('active',secs[i]===sec);
   });
   document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
