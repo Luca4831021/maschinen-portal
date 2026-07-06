@@ -653,14 +653,16 @@ async function loadRemoteDB(){
       headers:{'X-Master-Key':JB_KEY,'X-Bin-Meta':'false'},
       cache:'no-store'
     });
-    if(!r.ok)return null;
+    if(!r.ok){console.warn('JSONBin load failed:',r.status);return null;}
     const data=await r.json();
-    if(data&&typeof data==='object'&&data.adminPin){
+    // JSONBin gibt manchmal {record:{...}} zurück
+    const record=data?.record||data;
+    if(record&&typeof record==='object'){
       jbOnline=true;
-      return data;
+      return record;
     }
     return null;
-  }catch{return null;}
+  }catch(e){console.warn('JSONBin error:',e);return null;}
 }
 
 // Remote speichern (debounced — max 1x pro 2 Sekunden)
@@ -669,13 +671,20 @@ function saveDB(){
   if(jbSaveTimer)clearTimeout(jbSaveTimer);
   jbSaveTimer=setTimeout(async()=>{
     try{
-      await fetch(JB_URL,{
+      const r=await fetch(JB_URL,{
         method:'PUT',
         headers:{'Content-Type':'application/json','X-Master-Key':JB_KEY},
         body:JSON.stringify(DB)
       });
-      showSyncStatus('✓ Gespeichert');
-    }catch{
+      if(r.ok){
+        showSyncStatus('✓ Gespeichert');
+      } else {
+        const err=await r.text();
+        console.warn('JSONBin save error:',r.status,err);
+        showSyncStatus('⚠️ Fehler beim Speichern ('+r.status+')');
+      }
+    }catch(e){
+      console.warn('JSONBin save failed:',e);
       showSyncStatus('⚠️ Offline — lokal gespeichert');
     }
   },2000);
