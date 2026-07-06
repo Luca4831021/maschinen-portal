@@ -338,13 +338,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       </div>
     </div>
 
-    <!-- MASCHINE SUCHEN (nur für Bediener) -->
+    <!-- MASCHINE WÄHLEN (nur für Bediener) -->
     <div id="machineSearchWrap">
-      <div class="pin-label" style="margin-bottom:8px">Maschine suchen</div>
-      <input class="form-input" id="machineSearchLogin" placeholder="z.B. M-01 oder Spritzguss..." oninput="searchMachineLogin(this.value)" autocomplete="off" style="margin-bottom:8px;font-size:15px;padding:11px 13px">
-      <div id="machineSearchResults" style="max-height:180px;overflow-y:auto;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);display:none"></div>
-      <div id="machineSelected" style="display:none;background:#0e2a1f;border:1px solid #22c55e;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none">
-        <div style="font-size:11px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Ausgewählt</div>
+      <div class="pin-label" style="margin-bottom:8px">Maschine wählen</div>
+      <input class="form-input" id="machineSearchLogin" placeholder="Suchen..." oninput="searchMachineLogin(this.value)" autocomplete="off" style="margin-bottom:6px;font-size:14px;padding:9px 12px">
+      <div id="machineSearchResults" style="max-height:220px;overflow-y:auto;margin-bottom:12px;border-radius:8px;border:1px solid var(--border);display:block"></div>
+      <div id="machineSelected" style="display:none;background:#0e2a1f;border:1px solid #22c55e;border-radius:8px;padding:10px 14px;margin-bottom:12px">
+        <div style="font-size:11px;color:#86efac;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">✓ Ausgewählt</div>
         <div id="machineSelectedLabel" style="font-size:15px;font-weight:600;color:var(--text)"></div>
       </div>
     </div>
@@ -381,7 +381,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <div class="vsidebar-item active" id="vs-hints" onclick="openKachel('hints')"><span class="vi">⚠️</span>Hinweise</div>
       <div class="vsidebar-item" id="vs-machine" onclick="openKachel('machine')"><span class="vi">🔩</span>Maschine</div>
       <div class="sidebar-section">Bereiche</div>
-      <div class="vsidebar-item" id="vs-mes" onclick="openKachel('mes')"><span class="vi">🖥️</span>MES</div>
       <div class="vsidebar-item" id="vs-docs" onclick="openKachel('docs')"><span class="vi">📁</span>Dokumente</div>
       <div class="vsidebar-item" id="vs-kontakte" onclick="openKachel('kontakte')"><span class="vi">📞</span>Kontakte</div>
       <div class="vsidebar-item" id="vs-uebergabe" onclick="openKachel('uebergabe')"><span class="vi">🔄</span>Übergabe</div>
@@ -398,12 +397,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
       <!-- Maschinenhinweise -->
       <div id="vt-machine" class="vpanel">
         <div id="vMachineHints"></div>
-      </div>
-
-      <!-- MES -->
-      <div id="vt-mes" class="vpanel">
-        <div class="card"><div class="card-title">Produktionszeiten</div><div id="vMesProd"></div></div>
-        <div class="card"><div class="card-title">Stillstandzeiten</div><div id="vMesStill"></div></div>
       </div>
 
       <!-- Dokumente -->
@@ -785,14 +778,37 @@ tick();setInterval(tick,1000);
 // LOGIN
 // ═══════════════════════════════════════
 function buildLoginMachines(){
-  // no grid needed anymore — using search
   currentMachine=null;
   updateLoginHint();
+  // Show all machines immediately
+  setTimeout(()=>{
+    if(document.getElementById('loginScreen').style.display!=='none'){
+      const res=document.getElementById('machineSearchResults');
+      if(res)renderMachineDropdown(DB.machines,res);
+    }
+  },100);
+}
+function showAllMachines(){
+  const res=document.getElementById('machineSearchResults');
+  renderMachineDropdown(DB.machines,res);
+}
+function renderMachineDropdown(matches,res){
+  if(!matches.length){
+    res.innerHTML=`<div style="padding:12px 14px;font-size:13px;color:var(--muted)">Keine Maschine gefunden</div>`;
+    res.style.display='block';return;
+  }
+  res.style.display='block';
+  res.innerHTML=matches.map(m=>{
+    const h=HALLEN.find(x=>x.id===m.halle);
+    return`<div class="machine-search-item" onclick="selMachineLogin('${m.id}')">
+      <span>${m.nr} — ${m.name}</span>
+      <span class="msi-halle">${h?h.label:''}</span>
+    </div>`;
+  }).join('');
 }
 function searchMachineLogin(q){
   const res=document.getElementById('machineSearchResults');
-  const wrap=document.getElementById('machineSearchWrap');
-  if(!q.trim()){res.style.display='none';return}
+  if(!q.trim()){renderMachineDropdown(DB.machines,res);return}
   const matches=DB.machines.filter(m=>
     m.nr.toLowerCase().includes(q.toLowerCase())||
     m.name.toLowerCase().includes(q.toLowerCase())
@@ -831,10 +847,11 @@ function selRole(r){
   document.getElementById('roleSortier').classList.toggle('selected',r==='sortier');
   document.getElementById('roleAdmin').classList.toggle('selected',r==='admin');
   document.getElementById('pinInput').value='';
-  // Maschinen-Suche nur für Bediener anzeigen
   const wrap=document.getElementById('machineSearchWrap');
   if(wrap)wrap.style.display=r==='viewer'?'block':'none';
-  if(r!=='viewer'){currentMachine=null;}
+  if(r==='viewer'){
+    setTimeout(()=>{const res=document.getElementById('machineSearchResults');if(res)renderMachineDropdown(DB.machines,res);},50);
+  } else {currentMachine=null;}
   updateLoginHint();
 }
 function updateLoginHint(){
@@ -915,7 +932,7 @@ function doLogout(){
   document.getElementById('pinInput').value='';
   document.getElementById('loginErr').textContent='';
   const msl=document.getElementById('machineSearchLogin');if(msl)msl.value='';
-  const msr=document.getElementById('machineSearchResults');if(msr)msr.style.display='none';
+  const msr=document.getElementById('machineSearchResults');if(msr){msr.innerHTML='';msr.style.display='block';}
   const mss=document.getElementById('machineSelected');if(mss)mss.style.display='none';
   currentRole='';currentMachine=null;checkStates={};
   buildLoginMachines();
@@ -1226,7 +1243,7 @@ function renderDashboard(){
     <div class="dash-stat blue"><div class="ds-val">${DB.machines.length}</div><div class="ds-label">Maschinen</div></div>
     <div class="dash-stat green"><div class="ds-val">${DB.hints.length}</div><div class="ds-label">Allg. Hinweise</div></div>
     <div class="dash-stat blue"><div class="ds-val">${(DB.sortierHints||[]).length}</div><div class="ds-label">Sortierhinweise</div></div>
-    <div class="dash-stat green"><div class="ds-val">${DB.tutorials.length}</div><div class="ds-label">Tutorials</div></div>
+    <div class="dash-stat green"><div class="ds-val">${(DB.docs||[]).length}</div><div class="ds-label">Dok. Ordner</div></div>
   `;
   drawMap();
 }
