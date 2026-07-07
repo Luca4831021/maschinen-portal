@@ -370,6 +370,7 @@ body.dark .clabel.done{color:#8b949e}
   .vsidebar-item .vi{font-size:24px;display:block;line-height:1.2}
   .vsidebar-badge{display:none}
   .viewer-main{padding:10px;padding-top:12px;padding-bottom:86px}
+  .map-wrap{overflow-x:scroll!important;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
 }
 .kachel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
 .kachel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
@@ -1361,109 +1362,159 @@ function aNav(sec){
 // HALLENPLAN
 // ═══════════════════════════════════════
 function drawMap(){
-  const container=document.getElementById('hallMapContainer');
-  if(!container)return;
-  const isMobile=window.innerWidth<=600;
-  if(isMobile){
-    drawMapMobile(container);
-  } else {
-    drawMapDesktop(container);
-  }
-}
-
-function drawMapMobile(container){
-  // Mobile: Hallen als Karten untereinander, volle Breite
-  const html=HALLEN.map(h=>{
-    if(h.isSortier){
-      const hints=DB.sortierHints||[];
-      return`<div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer" onclick="openSortier()">
-        <div style="font-size:12px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">🔍 ${h.label}</div>
-        <div style="display:flex;align-items:center;gap:8px;padding:10px;background:white;border-radius:8px">
-          <span style="font-size:24px">🔍</span>
-          <div><div style="font-size:14px;font-weight:600">Sortierhinweise</div><div style="font-size:12px;color:var(--muted)">${hints.length} Einträge</div></div>
-          <span style="margin-left:auto;color:var(--accent)">›</span>
-        </div>
-      </div>`;
-    }
-    const ms=DB.machines.filter(m=>m.halle===h.id);
-    const machineCards=ms.length?ms.map(m=>{
-      const hints=(DB.machineHints[m.id]||[]).length;
-      const st=hints>0?'warn':'ok';
-      const colors={ok:{bg:'#f0fdf4',border:'#22c55e',dot:'#22c55e'},warn:{bg:'#fffbeb',border:'#f59e0b',dot:'#f59e0b'}};
-      return`<div style="background:${colors[st].bg};border:1.5px solid ${colors[st].border};border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px" onclick="openMachineDetail('${m.id}')">
-        <div style="width:8px;height:8px;border-radius:50%;background:${colors[st].dot};flex-shrink:0"></div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700">${m.nr}</div><div style="font-size:11px;color:var(--muted)">${m.name||''}</div></div>
-        ${hints>0?`<div style="background:#f59e0b;color:white;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700">${hints}</div>`:''}
-        <span style="color:var(--muted)">›</span>
-      </div>`;
-    }).join(''):`<div style="font-size:12px;color:var(--muted);padding:8px;text-align:center;font-style:italic">Keine Maschinen</div>`;
-    return`<div style="background:white;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;box-shadow:var(--shadow)">
-      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">${h.label} <span style="color:var(--muted);font-weight:400">(${ms.length} Maschinen)</span></div>
-      <div style="display:flex;flex-direction:column;gap:6px">${machineCards}</div>
-    </div>`;
-  }).join('');
-  container.innerHTML=html;
-}
-
-function drawMapDesktop(container){
-  // Desktop: SVG wie vorher
-  container.innerHTML='<svg id="hallMap" viewBox="0 0 1100 460" role="img" aria-label="Hallenplan" style="width:100%;min-width:700px;display:block"></svg>';
   const svg=document.getElementById('hallMap');
   if(!svg)return;
+  const isMobile=window.innerWidth<=600;
 
-  // Calculate dynamic height based on max machines per hall
-  const maxPerHall = Math.max(...HALLEN.filter(h=>!h.isSortier).map(h=>{
-    const ms=DB.machines.filter(m=>m.halle===h.id);
-    const cols=h.w>=200?2:1;
-    return Math.ceil(ms.length/cols);
-  }),1);
-  const svgH = Math.max(180, 50 + maxPerHall*50 + 20);
-  svg.setAttribute('viewBox',`0 0 1100 ${svgH}`);
+  if(isMobile){
+    // ── MOBILE: Eine Halle pro Seite, horizontal wischen ──
+    const mapWrap=document.getElementById('mapWrap');
+    const wrapW=mapWrap?mapWrap.clientWidth-24:320;
+    const hallenList=HALLEN.filter(h=>!h.isSortier);
+    const sortierHalle=HALLEN.find(h=>h.isSortier);
+    const allHallen=[...hallenList,...(sortierHalle?[sortierHalle]:[])];
 
-  let out='';
-  const cellW=Math.floor((svgW-16)/2);
+    const halleHeaderH=32;
+    const machH=48;
+    const pad=10;
+    const slotW=wrapW; // eine Halle = volle Breite
+    const gap=16;
+    const totalW=(slotW+gap)*allHallen.length;
 
-  // Hallen vertikal zeichnen
-  halleRows.forEach(({h,ms,cols,rows},i)=>{
-    const {y,hh}=hallePositions[i];
-    out+=`<rect class="halle-rect" x="4" y="${y}" width="${svgW-8}" height="${hh}" rx="8"></rect>`;
-    out+=`<text class="halle-label" x="${svgW/2}" y="${y+18}" text-anchor="middle" font-size="11">${h.label}</text>`;
-    if(!ms.length){
-      out+=`<text x="${svgW/2}" y="${y+hh/2+4}" text-anchor="middle" style="fill:#94a3b8;font-size:9px;font-style:italic">leer</text>`;
-      return;
-    }
-    ms.forEach((m,idx)=>{
-      const col=idx%cols;
-      const row=Math.floor(idx/cols);
-      const bx=6+col*(cellW+4);
-      const by=y+halleH+row*machH;
-      const hintsCount=(DB.machineHints[m.id]||[]).length;
-      const st=hintsCount>0?'warn':'ok';
-      const nm=m.name||'';
-      const nameShort=nm.length>14?nm.slice(0,13)+'…':nm;
-      out+=`<g class="mmach st-${st}" data-mid="${m.id}" tabindex="0" role="button" aria-label="${m.nr} ${nm}">`;
-      out+=`<rect x="${bx}" y="${by+2}" width="${cellW}" height="${machH-6}" rx="6"></rect>`;
-      out+=`<text class="mm-nr" x="${bx+8}" y="${by+16}" font-size="11" font-weight="700">${m.nr}</text>`;
-      out+=`<text class="mm-name" x="${bx+8}" y="${by+28}" font-size="9">${nameShort}</text>`;
-      if(hintsCount>0){
-        out+=`<circle fill="#f59e0b" cx="${bx+cellW-10}" cy="${by+10}" r="8"></circle>`;
-        out+=`<text fill="#fff" font-size="9" font-weight="700" x="${bx+cellW-10}" y="${by+13.5}" text-anchor="middle">${hintsCount}</text>`;
+    // Max rows across all hallen for consistent height
+    const maxRows=Math.max(...hallenList.map(h=>{
+      const ms=DB.machines.filter(m=>m.halle===h.id);
+      return Math.max(1,Math.ceil(ms.length/2));
+    }),1);
+    const svgH=halleHeaderH+maxRows*machH+pad*2+20;
+
+    svg.setAttribute('viewBox',`0 0 ${totalW} ${svgH}`);
+    svg.style.width=`${totalW}px`;
+    svg.style.height=`${svgH*(wrapW/slotW)}px`;
+    svg.style.minWidth='unset';
+
+    const cellW=Math.floor((slotW-16)/2);
+    let out='';
+
+    allHallen.forEach((h,hi)=>{
+      const ox=hi*(slotW+gap);
+      if(h.isSortier){
+        // Sortierbereich
+        out+=`<rect class="sortier-rect" x="${ox+4}" y="4" width="${slotW-8}" height="${svgH-8}" rx="10"></rect>`;
+        out+=`<text class="sortier-label" x="${ox+slotW/2}" y="28" text-anchor="middle" font-size="13" font-weight="700">SORTIERUNG</text>`;
+        out+=`<g class="sortier-btn" onclick="openSortier()" role="button" tabindex="0">
+          <rect x="${ox+slotW/2-60}" y="${svgH/2-40}" width="120" height="80" rx="12" fill="rgba(34,197,94,.15)" stroke="#22c55e" stroke-width="1.5"></rect>
+          <text x="${ox+slotW/2}" y="${svgH/2-10}" text-anchor="middle" font-size="28">🔍</text>
+          <text x="${ox+slotW/2}" y="${svgH/2+15}" text-anchor="middle" font-size="11" fill="#22c55e" font-weight="600">Öffnen</text>
+          <text x="${ox+slotW/2}" y="${svgH/2+30}" text-anchor="middle" font-size="9" fill="#64748b">${(DB.sortierHints||[]).length} Hinweise</text>
+        </g>`;
+      } else {
+        const ms=DB.machines.filter(m=>m.halle===h.id);
+        out+=`<rect class="halle-rect" x="${ox+4}" y="4" width="${slotW-8}" height="${svgH-8}" rx="10"></rect>`;
+        out+=`<text class="halle-label" x="${ox+slotW/2}" y="22" text-anchor="middle" font-size="12" font-weight="700">${h.label}</text>`;
+        // Trennlinie
+        out+=`<line x1="${ox+4}" y1="28" x2="${ox+slotW-4}" y2="28" stroke="#c8dff5" stroke-width="1"/>`;
+        if(!ms.length){
+          out+=`<text x="${ox+slotW/2}" y="${svgH/2}" text-anchor="middle" style="fill:#94a3b8;font-size:11px;font-style:italic">Keine Maschinen</text>`;
+        } else {
+          ms.forEach((m,idx)=>{
+            const col=idx%2,row=Math.floor(idx/2);
+            const bx=ox+8+col*(cellW+4);
+            const by=halleHeaderH+row*machH;
+            const hintsCount=(DB.machineHints[m.id]||[]).length;
+            const st=hintsCount>0?'warn':'ok';
+            const nm=m.name||'';
+            const nameShort=nm.length>14?nm.slice(0,13)+'…':nm;
+            out+=`<g class="mmach st-${st}" data-mid="${m.id}" tabindex="0" role="button">`;
+            out+=`<rect x="${bx}" y="${by+3}" width="${cellW}" height="${machH-8}" rx="7"></rect>`;
+            out+=`<text class="mm-nr" x="${bx+8}" y="${by+18}" font-size="12" font-weight="700">${m.nr}</text>`;
+            out+=`<text class="mm-name" x="${bx+8}" y="${by+31}" font-size="10">${nameShort}</text>`;
+            if(hintsCount>0){
+              out+=`<circle fill="#f59e0b" cx="${bx+cellW-10}" cy="${by+11}" r="9"></circle>`;
+              out+=`<text fill="#fff" font-size="9" font-weight="700" x="${bx+cellW-10}" y="${by+14.5}" text-anchor="middle">${hintsCount}</text>`;
+            }
+            out+=`</g>`;
+          });
+        }
       }
-      out+=`</g>`;
+      // Pfeil zur nächsten Halle
+      if(hi<allHallen.length-1){
+        out+=`<text x="${ox+slotW+gap/2}" y="${svgH/2+5}" text-anchor="middle" font-size="16" fill="#94a3b8">›</text>`;
+      }
     });
-  });
 
-  // Sortierbereich unten
-  if(sortierH){
-    out+=`<g class="sortier-btn" onclick="openSortier()" role="button" tabindex="0">
-      <rect class="sortier-rect" x="4" y="${sortierY}" width="${svgW-8}" height="${sortierBoxH-8}" rx="8"></rect>
-      <text x="${svgW/2}" y="${sortierY+28}" text-anchor="middle" font-size="22">🔍</text>
-      <text class="sortier-label" x="${svgW/2}" y="${sortierY+52}" text-anchor="middle" font-size="13" font-weight="700">SORTIERUNG</text>
-      <text x="${svgW/2}" y="${sortierY+68}" text-anchor="middle" font-size="10" fill="#64748b">${(DB.sortierHints||[]).length} Hinweise</text>
-    </g>`;
+    svg.innerHTML=out;
+
+    // Snap scrolling per halle
+    if(mapWrap){
+      mapWrap.style.scrollSnapType='x mandatory';
+      mapWrap.style.overflowX='scroll';
+      mapWrap.style.overflowY='hidden';
+    }
+    svg.style.scrollSnapAlign='start';
+
+  } else {
+    // ── DESKTOP: Horizontales Layout ──
+    const maxPerHall=Math.max(...HALLEN.filter(h=>!h.isSortier).map(h=>{
+      const ms=DB.machines.filter(m=>m.halle===h.id);
+      return Math.ceil(ms.length/2);
+    }),1);
+    const svgH=Math.max(180,50+maxPerHall*50+20);
+    svg.setAttribute('viewBox',`0 0 1100 ${svgH}`);
+    svg.style.width='100%';
+    svg.style.height='auto';
+    svg.style.minWidth='700px';
+
+    let out='';
+    HALLEN.forEach(h=>{
+      const cls=h.isSortier?'sortier-rect':'halle-rect';
+      const lblCls=h.isSortier?'sortier-label':'halle-label';
+      out+=`<rect class="${cls}" x="${h.x}" y="30" width="${h.w}" height="${svgH-35}" rx="8"></rect>`;
+      out+=`<text class="${lblCls}" x="${h.x+h.w/2}" y="22" text-anchor="middle">${h.label}</text>`;
+    });
+
+    const sh=HALLEN.find(h=>h.isSortier);
+    if(sh){
+      const sy=Math.floor(svgH/2)-50;
+      out+=`<g class="sortier-btn" onclick="openSortier()" role="button" tabindex="0">
+        <rect x="${sh.x+6}" y="${sy}" width="${sh.w-12}" height="100" rx="8"></rect>
+        <text x="${sh.x+sh.w/2}" y="${sy+35}" text-anchor="middle" font-size="20">🔍</text>
+        <text x="${sh.x+sh.w/2}" y="${sy+55}" text-anchor="middle" font-size="10">Sortierung</text>
+        <text x="${sh.x+sh.w/2}" y="${sy+72}" text-anchor="middle" font-size="9">${(DB.sortierHints||[]).length} Hinweise</text>
+      </g>`;
+    }
+
+    HALLEN.filter(h=>!h.isSortier).forEach(h=>{
+      const ms=DB.machines.filter(m=>m.halle===h.id);
+      if(!ms.length){
+        out+=`<text x="${h.x+h.w/2}" y="${svgH/2}" text-anchor="middle" style="fill:#8b949e;font-size:9px;font-style:italic">leer</text>`;
+        return;
+      }
+      const cols=h.w>=200?2:1;
+      const cellW=Math.floor((h.w-14)/cols);
+      ms.forEach((m,i)=>{
+        const col=i%cols,row=Math.floor(i/cols);
+        const bx=h.x+7+col*(cellW+2);
+        const by=42+row*48;
+        const hintsCount=(DB.machineHints[m.id]||[]).length;
+        const st=hintsCount>0?'warn':'ok';
+        const nm=m.name||'';
+        const nameShort=nm.length>11?nm.slice(0,10)+'…':nm;
+        out+=`<g class="mmach st-${st}" data-mid="${m.id}" tabindex="0" role="button">`;
+        out+=`<rect x="${bx}" y="${by}" width="${cellW}" height="40" rx="5"></rect>`;
+        out+=`<text class="mm-nr" x="${bx+5}" y="${by+15}">${m.nr}</text>`;
+        out+=`<text class="mm-name" x="${bx+5}" y="${by+28}">${nameShort}</text>`;
+        if(hintsCount>0){
+          out+=`<circle fill="#f59e0b" cx="${bx+cellW-8}" cy="${by+8}" r="7"></circle>`;
+          out+=`<text fill="#fff" font-size="8" font-weight="700" x="${bx+cellW-8}" y="${by+11}" text-anchor="middle">${hintsCount}</text>`;
+        }
+        out+=`</g>`;
+      });
+    });
+    svg.innerHTML=out;
   }
 
-  svg.innerHTML=out;
+  // Event listeners (both layouts)
   svg.querySelectorAll('.mmach').forEach(g=>{
     g.addEventListener('click',()=>openMachineDetail(g.dataset.mid));
     g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openMachineDetail(g.dataset.mid)}});
@@ -1472,11 +1523,6 @@ function drawMapDesktop(container){
     g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openSortier()}});
   });
 }
-
-// Redraw on resize
-window.addEventListener('resize',()=>{if(currentRole==='admin'&&currentAdminSection==='dashboard')drawMap();});
-
-// ── Maschinen Detail ──
 function openMachineDetail(mid){
   const m=DB.machines.find(x=>x.id===mid);
   if(!m)return;
@@ -1989,6 +2035,8 @@ setInterval(async()=>{
 
 // INIT
 buildLoginMachines();
+window.addEventListener('resize',()=>{if(currentRole==='admin')drawMap();});
+window.addEventListener("resize",()=>{if(currentRole==="admin")drawMap();});
 </script>
 </body>
 </html>
